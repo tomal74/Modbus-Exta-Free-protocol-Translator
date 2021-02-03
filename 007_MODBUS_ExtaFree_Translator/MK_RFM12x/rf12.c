@@ -45,8 +45,8 @@ void rf12_init( void ) {
 	// inicjalizacja przerwania asynchronicznego INT2
 	RF_IRQDDR 	&= ~(1<<IRQ);
 	RF_PORT 	|= (1<<IRQ);
-	GICR 		|= (1<<INT2);
-	MCUCSR 		&= ~(1<<ISC2);	// zbocze opadaj¹ce
+	EIMSK 		|= (1<<INT1);
+	EICRA 		&= ~(1<<ISC11);	// zbocze opadaj¹ce
 
 	// inicjalizacja przerwania synchronicznego INT0 / INT1
 //	RF_IRQDDR 	&= ~(1<<IRQ);
@@ -150,7 +150,7 @@ volatile uint8_t RF12_Data[ RF12_DataLength ];	// +10 nadmiarowo na pozosta³e cz
 
 
 /*! **************** OBS£UGA PRZERWANIA INTx ******************** */
-ISR(INT2_vect) {
+ISR(INT1_vect) {
 
 	if(RF12_status.Rx) {
 		if(RF12_Index < RF12_DataLength) {

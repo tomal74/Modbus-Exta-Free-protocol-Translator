@@ -19,14 +19,14 @@
 #define RF_PORT		PORTB
 #define RF_DDR		DDRB
 #define RF_PIN		PINB
-#define SDI		5	// MOSI	- wyjœcie
-#define SCK		7	// SCK
-#define CS		4	// SS
-#define SDO		6	// MISO	- wejœcie
+#define SDI		3	// MOSI	- wyjœcie
+#define SCK		5	// SCK
+#define CS		2	// SS
+#define SDO		4	// MISO	- wejœcie
 
-#define RF_IRQDDR	DDRB
-#define RF_IRQPIN	PINB
-#define IRQ		2		// mo¿na u¿yæ INT0, INT1 lub INT2
+#define RF_IRQDDR	DDRD
+#define RF_IRQPIN	PIND
+#define IRQ		3		// mo¿na u¿yæ INT0, INT1 lub INT2
 					// INT2 - po lekkich zmianach kodu
 
 

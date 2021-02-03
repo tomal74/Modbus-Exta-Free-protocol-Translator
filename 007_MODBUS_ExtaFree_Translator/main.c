@@ -15,11 +15,13 @@
 
 #define clientAddress 0x01
 
-#define LED_ON ( PORTA &= ~(1<<PA7) )
-#define LED_OFF ( PORTA |= (1<<PA7) )
+#define LED_ON ( PORTC &= ~(1<<PC1) )
+#define LED_OFF ( PORTC |= (1<<PC1) )
 
 uint8_t RFM12_buf[18];		// bufor odbiorczy
 uint8_t RFM12_Tx_buf[18];	// bufor nadawczy
+
+uint8_t motion_det[5];	// tablica czujek ruchu
 
 volatile uint16_t Timer1;
 volatile uint8_t first_prog_rotation = 1;
@@ -27,8 +29,8 @@ volatile uint8_t first_prog_rotation = 1;
 volatile uint8_t instate = 0;
 volatile uint8_t outstate = 0;
 volatile uint16_t inputRegisters[4];
-volatile uint16_t holdingRegisters[12] = { 0, 1, 33 };	// holdingRegisters[0] - wlaczanie parowania nowych urzadzen
-															// holdingRegisters[1] - nadajnik (pilot 255 kanalowy!!)
+volatile uint16_t holdingRegisters[12] = { 0, 1, 33 };	// holdingRegisters[0] - wlaczanie parowania nowych urzadzen															// holdingRegisters[1] - nadajnik (pilot 255 kanalowy!!)
+
 uint8_t RFM12_send(void);
 void RFM12_user_param_init(void);
 uint8_t RFM12_check_frame_sum(uint8_t *RFM12_user_buff);
@@ -83,14 +85,14 @@ void io_conf(void) {
 int main(void)
 {
 	// Ustawienie pinu PC1 jako wyjście (dioda LED
-	DDRA |= (1<<PA7);
-	PORTA |= (1<<PA7);
+	DDRC |= (1<<PC1);
+	PORTC |= (1<<PC1);
 
 	// Inicjalizacja przerwan od Timer2 tryb CTC - timery programowe
-	TCCR2 	|= (1<<WGM21);			//CTC
-	TCCR2 	|= (1<<CS22)|(1<<CS21)|(1<<CS20);	// preskaler = 1024
-	OCR2 	= 107;					// IRQ 10ms (100Hz)
-	TIMSK 	|= (1<<OCIE2);			// IRQ CTC ON
+	TCCR2A 	|= (1<<WGM21);			//CTC
+	TCCR2A 	|= (1<<CS22)|(1<<CS21)|(1<<CS20);	// preskaler = 1024
+	OCR2A 	= 77;					// IRQ 10ms (100Hz)
+	TIMSK2 	|= (1<<OCIE2A);			// IRQ CTC ON
 
 
 	//io_conf();
@@ -131,7 +133,9 @@ int main(void)
 	    	LED_OFF;
 	    }
 
-
+	    if(!Timer1) {
+	    	holdingRegisters[3] = 0;
+	    }
 
 	    // jezeli nic nie jest odbierane ani wysyłane, zacznij nasłuchiwanie
 	    if( !(RF12_status.stat&0x07) ) rf12_rxstart();
@@ -217,9 +221,9 @@ uint8_t exta_free_sum(uint8_t *RFM12_user_buff) {
 	return frame_sum;
 }
 
-
 uint8_t exta_free_check_type(void) {
-	if(RFM12_buf[3]==0x34 && RFM12_buf[4]==0x03 && RFM12_buf[5]==0xE6) return 2;	// czujnik
+	if(RFM12_buf[3]==0x42 && RFM12_buf[4]==0x14 && RFM12_buf[5]==0x2C) return 3;  // czujnik ruchu
+	else if(RFM12_buf[3]==0x34 && RFM12_buf[4]==0x03 && RFM12_buf[5]==0xE6) return 2;	// czujnik temperatury
 	else if(RFM12_buf[3]==0x14 && RFM12_buf[4]==0x6E && RFM12_buf[5]==0x5D) return 1;  // pilot
 
 	return 0;
@@ -235,13 +239,17 @@ uint8_t exta_free_write_val2holding_reg(volatile uint16_t *user_holding_register
 		sens_val = RFM12_buf[8] & 0x7F;
 		sens_val_dot = RFM12_buf[9];
 
-		if(RFM12_buf[7] == 0x52) sens_val_dot &= ~(1<<0) ; // czujnik, stan baterii OK
-		else if(RFM12_buf[7] == 0x5A) sens_val_dot |= (1<<0);	// czujnik, NISKI stan baterii
+		if(RFM12_buf[7] == 0x52 || RFM12_buf[7] == 0x50) sens_val_dot &= ~(1<<0) ; // czujnik, stan baterii OK
+		else if(RFM12_buf[7] == 0x5A || RFM12_buf[7] == 0x58) sens_val_dot |= (1<<0);	// czujnik, NISKI stan baterii
 
 		// wartość ujemna (znak na minus)
 		if(sens_val_sign) sens_val |= (1<<7);
 
 		user_holding_register[2] = (uint16_t) (sens_val << 8) | sens_val_dot;
+	}
+	else if(exta_type == 3) { //czujnik ruchu
+		Timer1 = 2000;	// ustaw Timer1 na 10s
+		user_holding_register[3] = 1;
 	}
 
 /*	if(exta_type == 1) {	// pilot
@@ -254,8 +262,8 @@ uint8_t exta_free_write_val2holding_reg(volatile uint16_t *user_holding_register
 
 
 void timer0100us_start(void) {
-	TCCR0|=(1<<CS01); //prescaler 8
-	TIMSK|=(1<<TOIE0);
+	TCCR0B|=(1<<CS01); //prescaler 8
+	TIMSK0|=(1<<TOIE0);
 }
 
 
@@ -340,6 +348,6 @@ ISR(TIMER2_COMP_vect)
 
 ISR(TIMER0_OVF_vect) { //this ISR is called 9765.625 times per second
 	modbusTickTimer();
-	TCNT0 = 118;
+	TCNT0 = 156;
 }
 
