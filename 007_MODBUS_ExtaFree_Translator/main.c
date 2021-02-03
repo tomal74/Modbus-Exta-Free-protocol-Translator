@@ -15,8 +15,8 @@
 
 #define clientAddress 0x01
 
-#define LED_ON ( PORTC &= ~(1<<PC1) )
-#define LED_OFF ( PORTC |= (1<<PC1) )
+#define LED_OFF ( PORTC &= ~(1<<PC1) )
+#define LED_ON ( PORTC |= (1<<PC1) )
 
 uint8_t RFM12_buf[18];		// bufor odbiorczy
 uint8_t RFM12_Tx_buf[18];	// bufor nadawczy
@@ -336,7 +336,7 @@ uint8_t ADC_rand_no(void) {
 
 
 
-ISR(TIMER2_COMP_vect)
+ISR(TIMER2_COMPA_vect)
 {
 	uint16_t n;
 
